@@ -14,6 +14,7 @@ class DecrementReflex(Reflex):
 class ParamReflex(Reflex):
     def change_word(self):
         self.word = 'space'
+        self.success = True
 
 
 class FormReflex(Reflex):
@@ -24,3 +25,13 @@ class FormReflex(Reflex):
 class MorphReflex(Reflex):
     def morph_me(self):
         self.morph('#morph', 'I got morphed!')
+
+class ErrorReflex(Reflex):
+    def increment(self, step=1):
+        raise Exception('error happened')
+
+
+class UserReflex(Reflex):
+    def get_user(self):
+        context = self.get_context_data()
+        self.user_reveal = context['object']

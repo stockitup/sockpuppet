@@ -5,11 +5,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="{% static 'js/example.js' %}"></script>
   <title>Param view</title>
 </head>
 <body>
+  <script src="{% static 'js/example.js' %}"></script>
   Hello <span id="word">{{ word }}</span>
-  <button id="button" data-reflex="click->ParamReflex#change_word">Change me</button>
+  <button
+    id="button"
+    data-reflex="click->ParamReflex#change_word"
+  >Change me</button>
+  <div id="success">{{ success }}</div>
+
+  <div>
+    <button id="user-button" data-reflex="click->UserReflex#get_user">Click me</button>
+    <span id="user-reflex">{{ user_reveal }}</span>
+  </div>
 </body>
 </html>

@@ -1,5 +1,8 @@
 from django.template.loader import render_to_string
 from django.template.backends.django import Template
+from django.urls import resolve
+from urllib.parse import urlparse
+
 from django.test import RequestFactory
 
 from .channel import Channel
@@ -29,6 +32,37 @@ class Reflex:
         self.is_morph = False
         self.reflex_id = reflex_id
         self.permanent_attribute_name = permanent_attribute_name
+        self.context = {}
+
+    def __repr__(self):
+        return f'<Reflex url: {self.url}, session: {self.get_channel_id()}>'
+
+    def get_context_data(self, *args, **kwargs):
+        if self.context:
+            self.context.update(**kwargs)
+            return self.context
+
+        parsed_url = urlparse(self.url)
+        resolved = resolve(parsed_url.path)
+        view = resolved.func.view_class()
+        view.request = self.request
+        try:
+            view.kwargs = resolved.kwargs
+            context = view.get_context_data(**{'stimulus_reflex': True})
+        except AttributeError:
+            view.get(self.request)
+            context = view.get_context_data(**{'stimulus_reflex': True})
+
+        self.context = context
+        self.context.update(**kwargs)
+        return self.context
+
+    def get_channel_id(self):
+        '''
+        Override this to make the reflex send to a different channel
+        other than the session_key of the user
+        '''
+        return self.session.session_key
 
     @property
     def request(self):

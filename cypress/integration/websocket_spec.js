@@ -1,4 +1,6 @@
 describe("Integration tests", () => {
+  // TODO, use something like this https://github.com/cypress-io/cypress/issues/1922
+  // Then we can replace the cy.wait(200)
   it("has session persistance for anonymous user!", () => {
     cy.visit('/test/')
     cy.get('#counter').should('have.text', '0')
@@ -54,5 +56,35 @@ describe("Integration tests", () => {
     cy.get('#morph-button').click()
 
     cy.get('#morph').should('have.text', 'I got morphed!')
+  })
+
+  it("throws an error in frontend when using error reflex", () => {
+    cy.visit('/error/')
+    cy.wait(200)
+
+    cy.get("#increment").click()
+    cy.wait(200)
+    cy.window().then((win) => {
+      expect(win.console.log).to.have.callCount(2);
+      let secondCall = win.console.log.args[1][0]
+      expect(secondCall).to.contain('failed')
+    });
+  })
+
+  it("able to use a list view without errors", () => {
+    cy.visit('/users/')
+    cy.wait(200)
+    cy.get('#button').click()
+
+    cy.get('#success').should('have.text', 'True')
+  })
+
+  it("able to use a detail view without errors", () => {
+    cy.visit('/users/1/')
+    cy.wait(200)
+    cy.get('#user-button').click()
+    cy.wait(200)
+
+    cy.get('#user-reflex').should('have.text', 'test_user')
   })
 })

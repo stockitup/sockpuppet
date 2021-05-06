@@ -2,10 +2,9 @@ import time
 import json
 import logging
 from importlib import import_module
-from functools import wraps
 import inspect
+from functools import wraps
 from os import walk, path
-import sys
 from urllib.parse import urlparse
 from urllib.parse import parse_qsl
 
@@ -39,17 +38,19 @@ def context_decorator(method, extra_context):
     return wrapped
 
 
-class SockpuppetConsumer(JsonWebsocketConsumer):
+class BaseConsumer(JsonWebsocketConsumer):
     reflexes = {}
+    subscriptions = set()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.subscriptions = set()
-
-        if not self.reflexes:
-            configs = apps.app_configs.values()
-            for config in configs:
-                self.load_reflexes_from_config(config)
+    def _get_channelname(self, channel_name):
+        try:
+            # StimulusReflex sends the channel name in the format
+            # of a json blob for name.
+            name = json.loads(channel_name)
+            name = name['channel'].replace('::', '-')
+        except json.decoder.JSONDecodeError:
+            name = channel_name
+        return name
 
     def connect(self):
         '''
@@ -100,6 +101,32 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
         )
         super().disconnect(*args, **kwargs)
 
+    def subscribe(self, data, **kwargs):
+        name = self._get_channelname(data['channelName'])
+        logger.debug('Subscribe %s to %s', self.channel_name, name)
+        async_to_sync(self.channel_layer.group_add)(
+            name,
+            self.channel_name
+        )
+
+    def unsubscribe(self, data, **kwargs):
+        name = self._get_channelname(data['channelName'])
+        async_to_sync(self.channel_layer.group_discard)(
+            name,
+            self.channel_name
+        )
+
+    def receive_json(self, data, **kwargs):
+        message_type = data.get('type')
+        if message_type is None and data.get('target'):
+            self.reflex_message(data, **kwargs)
+        elif message_type == 'subscribe':
+            self.subscribe(data, **kwargs)
+        elif message_type == 'unsubscribe':
+            self.unsubscribe(data, **kwargs)
+        else:
+            print('Unsupported')
+
     def message(self, event):
         logger.debug('Sending data: %s', event)
         self.send(json.dumps(event))
@@ -107,6 +134,11 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
     def group_send(self, recipient, message):
         send = async_to_sync(self.channel_layer.group_send)
         send(recipient, message)
+
+    def load_reflexes(self):
+        configs = apps.app_configs.values()
+        for config in configs:
+            self.load_reflexes_from_config(config)
 
     def load_reflexes_from_config(self, config):
         def append_reflex():
@@ -160,6 +192,9 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
         if not permanent_attribute_name:
             # Used in stimulus-reflex >= 3.4
             permanent_attribute_name = data['permanentAttributeName']
+        
+        if not self.reflexes:
+            self.load_reflexes()
 
         try:
             ReflexClass = self.reflexes.get(reflex_name)
@@ -173,20 +208,23 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
                 permanent_attribute_name=permanent_attribute_name
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
-        except TypeError:
+        except TypeError as exc:
             if not self.reflexes.get(reflex_name):
                 msg = f'Sockpuppet tried to find a reflex class called {reflex_name}. Are you sure such a class exists?' # noqa
-                raise SockpuppetError(msg)
-            raise
+                self.broadcast_error(msg, data)
+            else:
+                msg = str(exc)
+                self.broadcast_error(msg, data)
+            logging.exception(msg)
+            return
         except Exception as e:
             error = '{}: {}'.format(e.__class__.__name__, str(e))
             msg = 'SockpuppetConsumer failed to invoke {target}, with url {url}. {message}'.format(
                 target=target, url=url, message=error
             )
             self.broadcast_error(msg, data, None)
-            _, _, traceback = sys.exc_info()
-            exc = SockpuppetError(msg)
-            raise exc.with_traceback(traceback)
+            logging.exception(msg)
+            return
 
         try:
             self.render_page_and_broadcast_morph(reflex, selectors, data)
@@ -196,47 +234,10 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
                 url=url, message=error
             )
             self.broadcast_error(msg, data, reflex)
-            _, _, traceback = sys.exc_info()
-            exc = SockpuppetError(msg)
-            raise exc.with_traceback(traceback)
+            logging.exception(msg)
+            return
 
         logger.debug('Reflex took %6.2fms', (time.perf_counter() - start) * 1000)
-
-    def _get_channelname(self, channel_name):
-        try:
-            # StimulusReflex sends the channel name in the format
-            # of a json blob for name.
-            name = json.loads(channel_name)
-            name = name['channel'].replace('::', '-')
-        except json.decoder.JSONDecodeError:
-            name = channel_name
-        return name
-
-    def subscribe(self, data, **kwargs):
-        name = self._get_channelname(data['channelName'])
-        logger.debug('Subscribe %s to %s', self.channel_name, name)
-        async_to_sync(self.channel_layer.group_add)(
-            name,
-            self.channel_name
-        )
-
-    def unsubscribe(self, data, **kwargs):
-        name = self._get_channelname(data['channelName'])
-        async_to_sync(self.channel_layer.group_discard)(
-            name,
-            self.channel_name
-        )
-
-    def receive_json(self, data, **kwargs):
-        message_type = data.get('type')
-        if message_type is None and data.get('target'):
-            self.reflex_message(data, **kwargs)
-        elif message_type == 'subscribe':
-            self.subscribe(data, **kwargs)
-        elif message_type == 'unsubscribe':
-            self.unsubscribe(data, **kwargs)
-        else:
-            print('Unsupported')
 
     def render_page_and_broadcast_morph(self, reflex, selectors, data):
         if reflex.is_morph:
@@ -260,10 +261,15 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
         reflex_context['stimulus_reflex'] = True
 
         original_context_data = view.view_class.get_context_data
+        reflex.get_context_data(**reflex_context)
+        # monkey patch context method
+        view.view_class.get_context_data = reflex.get_context_data
+        # We also need to make sure that the last update from reflex context wins
         view.view_class.get_context_data = context_decorator(
             view.view_class.get_context_data, reflex_context
         )
-        response = view(reflex.request, resolved.args, resolved.kwargs)
+
+        response = view(reflex.request, *resolved.args, **resolved.kwargs)
         # we've got the response, the function needs to work as normal again
         view.view_class.get_context_data = original_context_data
         reflex.session.save()
@@ -301,13 +307,39 @@ class SockpuppetConsumer(JsonWebsocketConsumer):
         else:
             getattr(reflex, method_name)(*arguments)
 
-    def broadcast_error(self, message, data, reflex):
+    def broadcast_error(self, message, data, reflex=None):
         # We may have a sitation where we weren't able to get a reflex
         session_key = reflex.get_channel_id() if reflex else self.scope['session'].session_key
-        channel = Channel(session_key)
-        data.update({'error': 'message'})
+        channel = Channel(session_key, identifier=data['identifier'])
+        data.update({
+            'serverMessage': {
+                'subject': 'error',
+                'body': message,
+            }
+        })
         channel.dispatch_event({
-            'name': 'stimulus-reflex:500',
+            'name': 'stimulus-reflex:server-message',
             'detail': {'stimulus_reflex': data}
         })
         channel.broadcast()
+
+
+class SockpuppetConsumer(BaseConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if not self.reflexes:
+            self.load_reflexes()
+
+
+class SockpuppetConsumerAsgi(BaseConsumer):
+    '''
+    This consumer supports the asgi standard now in django
+    This consumer should be used when using channels 3.0.0 and upwards
+    '''
+
+    async def __call__(self, scope, receive, send):
+        await super().__call__(scope, receive, send)
+
+        if not self.reflexes:
+            self.load_reflexes()
