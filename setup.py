@@ -21,14 +21,14 @@ def get_version(*file_paths):
 
 
 version = get_version("sockpuppet", "__init__.py")
-readme = open('README.md').read()
+#readme = open('README.md').read()
 requirements = open('requirements.txt').readlines()
 
 setup(
     name='django-sockpuppet',
     version=version,
     description="""Helping you use websockets in an effective way in views""",
-    long_description=readme,
+#    long_description=readme,
     author='Jonathan Sundqvist',
     author_email='jonathan@argpar.se',
     url='https://github.com/jonathan-s/django-sockpuppet',
