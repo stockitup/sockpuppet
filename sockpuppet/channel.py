@@ -2,13 +2,14 @@ import json
 import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from .utils import camelize, camelize_value
+
+from .utils import camelize_value, camelcase
 
 logger = logging.getLogger(__name__)
 
 
 class Channel:
-    '''
+    """
     Accepts a name which should either be the name of the group
     or the channel_name to which the content will be broadcast to.
 
@@ -19,11 +20,11 @@ class Channel:
     If you're using this and initializes this with the session key as a name.
     You need to set the identifier to '{"channel":"StimulusReflex::Channel"}'
     which is the default identifier in the frontend.
-    '''
+    """
 
-    def __init__(self, name, identifier=''):
+    def __init__(self, name, identifier=""):
         if not identifier:
-            identifier = json.dumps({'channel': name}).replace(' ', '')
+            identifier = json.dumps({"channel": name}).replace(" ", "")
         self.identifier = identifier
         self.name = name
         self.operations = self.stub()
@@ -36,27 +37,28 @@ class Channel:
 
     def stub(self):
         return {
-            'dispatch_event': [],
-            'morph': [],
-            'inner_html': [],
-            'outer_html': [],
-            'text_content': [],
-            'insert_adjacent_html': [],
-            'insert_adjacent_text': [],
-            'remove': [],
-            'set_value': [],
-            'set_attribute': [],
-            'remove_attribute': [],
-            'add_css_class': [],
-            'remove_css_class': [],
-            'set_dataset_property': [],
-            'set_style': []
+            "add_css_class": [],
+            "dispatch_event": [],
+            "inner_html": [],
+            "insert_adjacent_html": [],
+            "insert_adjacent_text": [],
+            "morph": [],
+            "outer_html": [],
+            "remove_attribute": [],
+            "remove_css_class": [],
+            "remove": [],
+            "set_attribute": [],
+            "set_dataset_property": [],
+            "set_style": [],
+            "set_value": [],
+            "text_content": [],
         }
 
     def broadcast(self):
         operations = {
-            camelize(key): camelize_value(value)
-            for key, value in self.operations.items() if value
+            camelcase(key): camelize_value(value)
+            for key, value in self.operations.items()
+            if value
         }
         channel_layer = get_channel_layer()
         group_send = async_to_sync(channel_layer.group_send)
@@ -66,146 +68,188 @@ class Channel:
                 "identifier": self.identifier,
                 "type": "message",
                 "cableReady": True,
-                "operations": operations
-            }
+                "operations": operations,
+            },
         )
         self.clear()
 
-    def dispatch_event(self, options={}):
-        '''
-        dispatch_event: [{
-                name:     "string",
-                detail:   "object",
-                selector: "string",
-            }, ...
-        ],
-        '''
-        self.add_operation('dispatch_event', options)
+    def dispatch_event(self, options={}, **kwargs):
+        """
+        name:       "string",   # required - the name of the DOM event to dispatch (can be custom)
+        detail:     {},         # [null]   - assigned to event.detail
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # [document] - string containing a CSS selector or XPath expression
+        xpath:      true|false  # [false] - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("dispatch_event", options)
+        return self
 
-    def morph(self, options={}):
-        '''
-        morph: [{
-                selector:      "string",
-                html:          "string"
-                children_only:  true|false,
-                permanent_attribute_name: "string",
-                focus_selector: "string",
-            }, ...
-        ],
-        '''
-        self.add_operation('morph', options)
+    def morph(self, options={}, **kwargs):
+        """
+        cancel:                   true|false, # [false]  - cancel the operation (for use on client)
+        children_only:            true|false, # [false]  - indicates if only child nodes should be morphed... skipping the parent element
+        focus_selector:           "string",   # [null]   - string containing a CSS selector
+        html:                     "string",   # [null]   - the HTML to assign
+        permanent_attribute_name: "string",   # [null]   - an attribute name that prevents elements from being updated i.e. "data-permanent"
+        select_all:               true|false, # [false]  - operate on list of elements returned from selector
+        selector:                 "string",   # required - string containing a CSS selector or XPath expression
+        xpath:                    true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("morph", options)
+        return self
 
-    def inner_html(self, options={}):
-        '''
-           inner_html: [{
-             selector:      "string",
-             focus_selector: "string",
-             html:          "string"
-           }, ...],
-        '''
-        self.add_operation('inner_html', options)
+    def inner_html(self, options={}, **kwargs):
+        """
+        cancel:         true|false, # [false]  - cancel the operation (for use on client)
+        focus_selector: "string",   # [null]   - string containing a CSS selector
+        html:           "string",   # [null]   - the HTML to assign
+        select_all:     true|false, # [false]  - operate on list of elements returned from selector
+        selector:       "string",   # required - string containing a CSS selector or XPath expression
+        xpath:          true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("inner_html", options)
+        return self
 
-    def outer_html(self, options={}):
-        '''
-           outer_html: [{
-             selector:      "string",
-             focus_selector: "string",
-             html:          "string"
-           }, ...],
-        '''
-        self.add_operation('outer_html', options)
+    def outer_html(self, options={}, **kwargs):
+        """
+        cancel:         true|false, # [false]  - cancel the operation (for use on client)
+        focus_selector: "string",   # [null]   - string containing a CSS selector
+        html:           "string",   # [null]   - the HTML to use as replacement
+        select_all:     true|false, # [false]  - operate on list of elements returned from selector
+        selector:       "string",   # required - string containing a CSS selector or XPath expression
+        xpath:          true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("outer_html", options)
+        return self
 
-    def text_content(self, options={}):
-        '''
-           text_content: [{
-             selector: "string",
-             text:     "string"
-           }, ...]
-        '''
-        self.add_operation('text_content', options)
+    def text_content(self, options={}, **kwargs):
+        """
+        cancel:         true|false,     # [false]  - cancel the operation (for use on client)
+        focus_selector: "string",       # [null]   - string containing a CSS selector
+        select_all:     true|false,     # [false]  - operate on list of elements returned from selector
+        selector:       "string",       # required - string containing a CSS selector or XPath expression
+        text:           "string",       # [null]   - the text to assign
+        xpath:          true|false      # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("text_content", options)
+        return self
 
-    def insert_adjacent_html(self, options={}):
-        '''
-        insert_adjacent_html: [{
-            selector:      "string",
-            focus_selector: "string",
-            position:      "string",
-            html:          "string"
-        }, ...],
-        '''
-        self.add_operation('insert_adjacent_html', options)
+    def insert_adjacent_html(self, options={}, **kwargs):
+        """
+        cancel:         true|false, # [false]     - cancel the operation (for use on client)
+        focus_selector: "string",   # [null]      - string containing a CSS selector
+        html:           "string",   # [null]      - the HTML to insert
+        position:       "string",   # [beforeend] - the relative position to the DOM element (beforebegin, afterbegin, beforeend, afterend)
+        select_all:     true|false, # [false]     - operate on list of elements returned from selector
+        selector:       "string",   # required    - string containing a CSS selector or XPath expression
+        xpath:          true|false  # [false]     - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("insert_adjacent_html", options)
+        return self
 
-    def remove(self, options={}):
-        '''
-        remove: [{
-            selector:      "string",
-            focus_selector: "string,
-        }, ...],
-        '''
-        self.add_operation('remove', options)
+    def remove(self, options={}, **kwargs):
+        """
+        cancel:         true|false, # [false]  - cancel the operation (for use on client)
+        focus_selector: "string",   # [null]   - string containing a CSS selector
+        select_all:     true|false, # [false]  - operate on list of elements returned from selector
+        selector:       "string",   # required - string containing a CSS selector or XPath expression
+        xpath:          true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("remove", options)
+        return self
 
-    def remove_attribute(self, options={}):
-        '''
-        remove_attribute: [{
-            selector: "string",
-            name:     "string"
-        }, ...],
-        '''
-        self.add_operation('remove_attribute', options)
+    def remove_attribute(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        name:       "string",   # required - the attribute to remove
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("remove_attribute", options)
+        return self
 
-    def set_attribute(self, options={}):
-        '''
-        set_attribute: [{
-            selector: "string",
-            name:     "string",
-            value:    "string"
-        }, ...],
-        '''
-        self.add_operation('set_attribute', options)
+    def set_attribute(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        name:       "string",   # required - the attribute to set
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        value:      "string",   # [null]   - the value to assign to the attribute
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("set_attribute", options)
+        return self
 
-    def set_value(self, options={}):
-        '''
-        set_value: [{
-            selector: "string",
-            value:    "string"
-        }, ...],
-        '''
-        self.add_operation('set_value', options)
+    def set_value(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        value:      "string",   # [null]   - the value to assign to the attribute
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("set_value", options)
+        return self
 
-    def add_css_class(self, options={}):
-        '''
-        add_css_class: [{
-            selector: "string",
-            name:     "string"
-        }, ...],
-        '''
-        self.add_operation('add_css_class', options)
+    def add_css_class(self, options={}, **kwargs):
+        """
+        cancel:     true|false,      # [false]  - cancel the operation (for use on client)
+        name:       "string/array",  # [null]   - string or array containing the CSS class name to add
+        select_all: true|false,      # [false]  - operate on list of elements returned from selector
+        selector:   "string",        # required - string containing a CSS selector or XPath expression
+        xpath:      true|false       # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("add_css_class", options)
+        return self
 
-    def remove_css_class(self, options={}):
-        '''
-        remove_css_class: [{
-            selector: "string",
-            name:     "string"
-        }, ...],
-        '''
-        self.add_operation('remove_css_class', options)
+    def remove_css_class(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        name:       "string",   # [null]   - string containing the CSS class name to remove
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("remove_css_class", options)
+        return self
 
-    def set_dataset_property(self, options):
-        '''
-        set_dataset_property: [{
-            selector: "string",
-            name:     "string",
-            value:    "string"
-        }, ...],
-        '''
-        self.add_operation('set_dataset_property', options)
+    def set_dataset_property(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        name:       "string",   # required - the property to set, camelCased
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        value:      "string",   # [null]   - the value to assign to the dataset
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("set_dataset_property", options)
+        return self
 
-    def set_style(self, options):
-        '''
-        set_style: [{
-          selector: "string",
-          name:     "string",
-          value:    "string"
-        }, ...],
-        '''
-        self.add_operation('set_style', options)
+    def set_style(self, options={}, **kwargs):
+        """
+        cancel:     true|false, # [false]  - cancel the operation (for use on client)
+        select_all: true|false, # [false]  - operate on list of elements returned from selector
+        selector:   "string",   # required - string containing a CSS selector or XPath expression
+        styles: {
+            background: "red",
+            color: "white"
+        },
+        xpath:      true|false  # [false]  - process the selector as an XPath expression
+        """
+        options.update(kwargs)
+        self.add_operation("set_style", options)
+        return self
