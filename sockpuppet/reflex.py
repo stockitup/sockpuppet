@@ -38,9 +38,9 @@ class Reflex:
         return f"<Reflex url: {self.url}, session: {self.get_channel_id()}>"
 
     def get_context_data(self, *args, **kwargs):
-        if self.context:
-            self.context.update(**kwargs)
-            return self.context
+        #if self.context:
+        #    self.context.update(**kwargs)
+        #    return self.context
 
         parsed_url = urlparse(self.url)
         resolved = resolve(parsed_url.path)
