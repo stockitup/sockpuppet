@@ -111,7 +111,6 @@ export default class WebsocketConsumer {
         this._url = url
         this.subscriptions = new Subscriptions(this)
 
-        options = {maxRetries: 3, ...options}
         this.connection = new ReconnectingWebSocket(url, [], options)
         this.connection.isOpen = function open() {
             return this.readyState === ReconnectingWebSocket.OPEN;
