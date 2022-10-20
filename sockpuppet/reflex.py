@@ -55,7 +55,7 @@ class Reflex:
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
 
-        context = view.get_context_data(**{"stimulus_reflex": True})
+        context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
 
         self.context = context
         self.context.update(**kwargs)
