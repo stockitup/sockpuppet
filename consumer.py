@@ -166,6 +166,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                     append_reflex()
 
     def reflex_message(self, data, **kwargs):
+        from jad.settings import INSTALLED_APPS
         logger.debug("Json: %s", data)
         logger.debug("kwargs: %s", kwargs)
         start = time.perf_counter()
@@ -186,6 +187,22 @@ class BaseConsumer(JsonWebsocketConsumer):
             msg = f"Reflex couldn't be loaded: {str(e)}"
             self.broadcast_error(msg, data)
             return
+        if 'faafo' in INSTALLED_APPS:
+            # load them bitches:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(f"SELECT data, name FROM faafo_reflex;", [])
+                for row in cursor.fetchall():
+                    try:
+                        exec(f'{row[0]}\n')
+                        self.reflexes.update(
+                            {
+                                ReflexClass.__name__: ReflexClass
+                                for ReflexClass in Reflex.__subclasses__()
+                            }
+                        )
+                    except Exception as e:
+                        print(e)
 
         try:
             ReflexClass = self.reflexes.get(reflex_class_name)
