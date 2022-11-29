@@ -188,6 +188,25 @@ class BaseConsumer(JsonWebsocketConsumer):
             return
 
         try:
+            if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
+                # load them bitches:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute("select data, name from faafo_reflex;", [])
+                    for row in cursor.fetchall():
+                        exec(f'{row[0]}\n')
+                        self.reflexes.update(
+                            {
+                                ReflexClass.__name__: ReflexClass
+                                for ReflexClass in Reflex.__subclasses__()
+                            }
+                        )
+        except Exception as e:
+            msg = f"Reflex couldn't be loaded: {str(e)}"
+            self.broadcast_error(msg, data)
+            return
+
+        try:
             ReflexClass = self.reflexes.get(reflex_class_name)
             reflex = ReflexClass(
                 self, url=url,
