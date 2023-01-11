@@ -192,7 +192,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                 # load them bitches:
                 from django.db import connection
                 with connection.cursor() as cursor:
-                    cursor.execute("select data, name from faafo_reflex;", [])
+                    cursor.execute("select d_string, name from fafo_block where meta_data_id=4;", [])
                     for row in cursor.fetchall():
                         exec(f'{row[0]}\n')
                         self.reflexes.update(
