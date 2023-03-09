@@ -52,6 +52,7 @@ class Channel:
             "set_style": [],
             "set_value": [],
             "text_content": [],
+            "javascript": [],
         }
 
     def broadcast(self):
@@ -253,3 +254,13 @@ class Channel:
         options.update(kwargs)
         self.add_operation("set_style", options)
         return self
+    
+    def javascript(self, options={}, **kwargs):
+        """
+        data:     "string", # required - javascript string you'd like to run
+        vars:     {}, # - declare your variables here, they'll be available in your javascript as vars.<name> WHERE THEY GET TURNED INTO CAMELCASE BECAUSE FUCK ME
+        """
+        options.update(kwargs)
+        self.add_operation("javascript", options)
+        return self
+
