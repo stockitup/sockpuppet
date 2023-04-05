@@ -54,8 +54,14 @@ class Reflex:
 
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
+            
+        if hasattr(self.request, 'user'):
+            user = self.request.user
+        else:
+            from django.contrib.auth.models import AnonymousUser
+            user = AnonymousUser()
 
-        context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
+        context = view.get_context_data(**{"stimulus_reflex": True, 'user':user, **kwargs})
 
         self.context = context
         self.context.update(**kwargs)
