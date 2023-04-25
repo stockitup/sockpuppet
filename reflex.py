@@ -94,18 +94,18 @@ class Reflex:
         '''
         return self.session.session_key
 
-    def morph(self, selector='', html='', template='', context={}):
+    def morph(self, selector='', html=None, template='', context={}):
         """
         If a morph is executed without any arguments, nothing is executed
         and the reflex won't send over any data to the frontend.
         """
         self.is_morph = True
-        no_arguments = [not selector, not html, (not template and not context)]
+        no_arguments = [not selector, html == None, (not template and not context)]
         if all(no_arguments) and not selector:
             # an empty morph, nothing is sent ever.
             return
 
-        if html:
+        if html != None:
             html = html
         elif isinstance(template, Template):
             html = template.render(context)
