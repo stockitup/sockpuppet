@@ -42,6 +42,7 @@ def context_decorator(method, extra_context):
 class BaseConsumer(JsonWebsocketConsumer):
     reflexes = {}
     subscriptions = set()
+    user_tabid_whereyouat = dict()
 
     def _get_channelname(self, channel_name):
         try:
@@ -81,6 +82,8 @@ class BaseConsumer(JsonWebsocketConsumer):
                 },
             )
 
+        self.user_tabid_whereyouat[session.session_key] = {'where': None}
+
         logger.debug(
             ":: CONNECT: Channel %s session: %s", self.channel_name, session.session_key
         )
@@ -98,6 +101,8 @@ class BaseConsumer(JsonWebsocketConsumer):
             self.channel_name,
             session.session_key,
         )
+        self.user_tabid_whereyouat.pop(session.session_key)
+
         super().disconnect(*args, **kwargs)
 
     def subscribe(self, data, **kwargs):
@@ -178,6 +183,10 @@ class BaseConsumer(JsonWebsocketConsumer):
         arguments = data['args'] if data.get('args') else []
         params = dict(parse_qsl(data['formData']))
         element = Element(data['attrs'])
+
+        if data.get('target', None) in ["BlockReflex#navigate_to_block", "BlockReflex#back", "BlockReflex#forward"]:
+            self.user_tabid_whereyouat[self.scope['session'].session_key].update(where=data['dataset'].get("data-id", None))
+        print(self.user_tabid_whereyouat)
 
         try:
             if not self.reflexes:
