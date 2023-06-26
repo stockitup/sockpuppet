@@ -54,7 +54,7 @@ class Reflex:
 
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
-            
+
         if hasattr(self.request, 'user'):
             user = self.request.user
         else:
@@ -102,7 +102,18 @@ class Reflex:
         self.is_morph = True
         no_arguments = [not selector, html == None, (not template and not context)]
         if all(no_arguments) and not selector:
-            # an empty morph, nothing is sent ever.
+            # an empty morph, dispatches an event with the name 'empty_morph', which does nothing.
+            broadcaster = Channel(self.get_channel_id(), identifier=self.identifier)
+            broadcaster.dispatch_event({
+                'name': 'empty_morph',
+                'detail': {
+                    'stimulus_reflex': {
+                        'reflexId': self.reflex_id,
+                        'url': self.url
+                    }
+                },
+            })
+            broadcaster.broadcast()
             return
 
         if html != None:
