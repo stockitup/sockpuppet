@@ -1,3 +1,5 @@
+from importlib import import_module
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.template.backends.django import Template
 from django.urls import resolve
@@ -55,13 +57,14 @@ class Reflex:
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
 
-        if hasattr(self.request, 'user'):
-            user = self.request.user
-        else:
-            from django.contrib.auth.models import AnonymousUser
-            user = AnonymousUser()
+        context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
 
-        context = view.get_context_data(**{"stimulus_reflex": True, 'user':user, **kwargs})
+        for context_processor in settings.TEMPLATES[0]['OPTIONS']['context_processors']:
+            split = context_processor.split('.')
+            module, klassname = split[:-1], split[-1]
+            module = '.'.join(module)
+            func = getattr(import_module(module), klassname)
+            context.update(func(view.request))
 
         self.context = context
         self.context.update(**kwargs)
