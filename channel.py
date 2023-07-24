@@ -62,16 +62,19 @@ class Channel:
             if value
         }
         channel_layer = get_channel_layer()
-        group_send = async_to_sync(channel_layer.group_send)
-        group_send(
-            self.name,
-            {
-                "identifier": self.identifier,
-                "type": "message",
-                "cableReady": True,
-                "operations": operations,
-            },
-        )
+        message = {
+            "identifier": self.identifier,
+            "type": "message",
+            "cableReady": True,
+            "operations": operations,
+        }
+
+        if 'specific.' in self.name:
+            fun = async_to_sync(channel_layer.send)
+        else:
+            fun = async_to_sync(channel_layer.group_send)
+
+        fun(self.name, message)
         self.clear()
 
     def dispatch_event(self, options={}, **kwargs):
@@ -254,7 +257,7 @@ class Channel:
         options.update(kwargs)
         self.add_operation("set_style", options)
         return self
-    
+
     def javascript(self, options={}, **kwargs):
         """
         data:     "string", # required - javascript string you'd like to run
