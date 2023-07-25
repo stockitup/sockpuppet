@@ -291,8 +291,11 @@ class BaseConsumer(JsonWebsocketConsumer):
     def broadcast_morphs(self, selectors, data, html, reflex):
         document, selectors = get_document_and_selectors(html, selectors)
 
-        channel = Channel(reflex.get_channel_id(), identifier=data["identifier"])
-        logger.debug("Broadcasting to %s", reflex.get_channel_id())
+        # channel = Channel(reflex.get_channel_id(), identifier=data["identifier"])
+        # logger.debug("Broadcasting to %s", reflex.get_channel_id())
+
+        channel = Channel(self.channel_name, identifier=data["identifier"])
+        logger.debug("Broadcasting to %s", self.channel_name)
 
         # TODO can be removed once stimulus-reflex has increased a couple of versions
         permanent_attribute_name = data.get("permanent_attribute_name")
