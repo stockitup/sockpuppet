@@ -103,10 +103,11 @@ class Reflex:
         and the reflex won't send over any data to the frontend.
         """
         self.is_morph = True
+        broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
+
         no_arguments = [not selector, html == None, (not template and not context)]
         if all(no_arguments) and not selector:
             # an empty morph, dispatches an event with the name 'empty_morph', which does nothing.
-            broadcaster = Channel(self.get_channel_id(), identifier=self.identifier)
             broadcaster.dispatch_event({
                 'name': 'empty_morph',
                 'detail': {
@@ -116,26 +117,24 @@ class Reflex:
                     }
                 },
             })
-            broadcaster.broadcast()
-            return
-
-        if html != None:
-            html = html
-        elif isinstance(template, Template):
-            html = template.render(context)
         else:
-            html = render_to_string(template, context)
+            if html != None:
+                html = html
+            elif isinstance(template, Template):
+                html = template.render(context)
+            else:
+                html = render_to_string(template, context)
 
-        broadcaster = Channel(self.get_channel_id(), identifier=self.identifier)
-        broadcaster.morph({
-            'selector': selector,
-            'html': html,
-            'children_only': True,
-            'permanent_attribute_name': self.permanent_attribute_name,
-            'stimulus_reflex': {
-                'morph': 'selector',
-                'reflexId': self.reflex_id,
-                'url': self.url
-            }
-        })
+            broadcaster.morph({
+                'selector': selector,
+                'html': html,
+                'children_only': True,
+                'permanent_attribute_name': self.permanent_attribute_name,
+                'stimulus_reflex': {
+                    'morph': 'selector',
+                    'reflexId': self.reflex_id,
+                    'url': self.url
+                }
+            })
+
         broadcaster.broadcast()
