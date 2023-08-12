@@ -65,7 +65,8 @@ class Reflex:
             module = '.'.join(module)
             func = getattr(import_module(module), klassname)
             context.update(func(view.request))
-
+        if context.get('user'):
+            context.get('user').refresh_from_db()
         self.context = context
         self.context.update(**kwargs)
         return self.context
