@@ -42,13 +42,6 @@ def context_decorator(method, extra_context):
 class BaseConsumer(JsonWebsocketConsumer):
     reflexes = {}
     subscriptions = set()
-    subscription_mapping = {
-        'orders2-items': [
-            'shipping_feedback',
-            'new_order',
-            'order_error'
-        ]
-    }
 
     def _get_channelname(self, channel_name):
         try:
@@ -71,7 +64,7 @@ class BaseConsumer(JsonWebsocketConsumer):
         if not has_session_key:
             # normally there is no session key for anonymous users.
             session.save()
-        breakpoint()
+
         async_to_sync(self.channel_layer.group_add)(
             session.session_key, self.channel_name
         )
@@ -108,24 +101,15 @@ class BaseConsumer(JsonWebsocketConsumer):
         super().disconnect(*args, **kwargs)
 
     def subscribe(self, data, **kwargs):
-        name = self._get_channelname(data["groupName"])
+        name = self._get_channelname(data["channelName"])
         logger.debug("Subscribe %s to %s", self.channel_name, name)
         async_to_sync(self.channel_layer.group_add)(name, self.channel_name)
 
-        if 'liverep' not in data["groupName"]:
-            return
-        # breakpoint()
-        # if data["groupName"] not in self.subscription_mapping:
-        #     self.subscription_mapping[data["groupName"]] = []
-
-        # if self.channel_name not in self.subscription_mapping[data["groupName"]]:
-        #     self.subscription_mapping[data["groupName"]].append(self.channel_name)
-
     def unsubscribe(self, data, **kwargs):
-        name = self._get_channelname(data["groupName"])
+        if 'channelName' not in data:
+            return
+        name = self._get_channelname(data["channelName"])
         async_to_sync(self.channel_layer.group_discard)(name, self.channel_name)
-
-
 
     def receive_json(self, data, **kwargs):
         message_type = data.get("type")
@@ -236,6 +220,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                 identifier=identifier,
                 params=params,
                 reflex_id=data['reflexId'],
+                data=data
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
         except TypeError as exc:

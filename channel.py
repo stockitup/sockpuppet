@@ -71,10 +71,14 @@ class Channel:
 
         if 'specific.' in self.name:
             fun = async_to_sync(channel_layer.send)
+            fun(self.name, message)
+            message['identifier'] = f'{{"channel":"{self.name.split("!")[1]}"}}'
+            fun = async_to_sync(channel_layer.group_send)
+            fun(self.name.split('!')[1], message)
         else:
             fun = async_to_sync(channel_layer.group_send)
+            fun(self.name, message)
 
-        fun(self.name, message)
         self.clear()
 
     def dispatch_event(self, options={}, **kwargs):
