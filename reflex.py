@@ -22,7 +22,7 @@ PROTECTED_VARIABLES = [
 class Reflex:
     def __init__(
         self, consumer, url, element, selectors, params, identifier='',
-        permanent_attribute_name=None, reflex_id=None
+        permanent_attribute_name=None, reflex_id=None, data=None
     ):
         self.consumer = consumer
         self.url = url
@@ -35,6 +35,7 @@ class Reflex:
         self.reflex_id = reflex_id
         self.permanent_attribute_name = permanent_attribute_name
         self.context = {}
+        self.data = data or {}
 
     def __repr__(self):
         return f"<Reflex url: {self.url}, session: {self.get_channel_id()}>"

@@ -106,6 +106,8 @@ class BaseConsumer(JsonWebsocketConsumer):
         async_to_sync(self.channel_layer.group_add)(name, self.channel_name)
 
     def unsubscribe(self, data, **kwargs):
+        if 'channelName' not in data:
+            return
         name = self._get_channelname(data["channelName"])
         async_to_sync(self.channel_layer.group_discard)(name, self.channel_name)
 
@@ -218,6 +220,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                 identifier=identifier,
                 params=params,
                 reflex_id=data['reflexId'],
+                data=data
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
         except TypeError as exc:
