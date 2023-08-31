@@ -89,6 +89,14 @@ class BaseConsumer(JsonWebsocketConsumer):
         """
         When we disconnect we unsubscribe from the user session key.
         """
+        import redis
+        r_channels = redis.Redis(db=0)
+        keys = r_channels.keys('asgi:group:*')
+        for key in keys:
+            key = key.decode()
+            async_to_sync(self.channel_layer.group_discard)(
+                key.split(':')[2], self.channel_name
+            )
         session = self.scope["session"]
         async_to_sync(self.channel_layer.group_discard)(
             session.session_key, self.channel_name
