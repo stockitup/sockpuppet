@@ -1,4 +1,5 @@
 from importlib import import_module
+from secrets import token_urlsafe
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.template.backends.django import Template
@@ -139,4 +140,17 @@ class Reflex:
                 }
             })
 
+        broadcaster.broadcast()
+
+    def send_toast(self, toast_context, detail:dict):
+        """detail gets piped into bootstrap toast options can be either autohide:False or delay:(ms) """
+        broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
+        element_id = 't' + token_urlsafe(4)
+        toast_context.update(id=element_id)
+        html = render_to_string('toast.html', context=toast_context)
+        broadcaster.insert_adjacent_html({'selector':'.toast-container', 'html':html})
+        broadcaster.broadcast()
+        detail_args = {'id':element_id,}
+        detail_args.update(detail)
+        broadcaster.dispatch_event({'name': 'toast','detail': detail_args})
         broadcaster.broadcast()
