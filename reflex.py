@@ -100,7 +100,7 @@ class Reflex:
         '''
         return self.session.session_key
 
-    def morph(self, selector='', html=None, template='', context={}):
+    def morph(self, selector='', html=None, template='', context={}, select_all=False):
         """
         If a morph is executed without any arguments, nothing is executed
         and the reflex won't send over any data to the frontend.
@@ -132,6 +132,7 @@ class Reflex:
                 'selector': selector,
                 'html': html,
                 'children_only': True,
+                'select_all': select_all,
                 'permanent_attribute_name': self.permanent_attribute_name,
                 'stimulus_reflex': {
                     'morph': 'selector',
