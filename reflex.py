@@ -145,10 +145,16 @@ class Reflex:
 
     def send_toast(self, toast_context, detail:dict):
         """detail gets piped into bootstrap toast options can be either autohide:False or delay:(ms) """
+        from django.template import Context, Template as Template_django
         broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
+        
         element_id = 't' + token_urlsafe(4)
         toast_context.update(id=element_id)
+        if 'body' in toast_context:
+            t = Template_django(toast_context['body'])
+            toast_context['body'] = t.render(Context(toast_context))
         html = render_to_string('toast.html', context=toast_context)
+        
         broadcaster.insert_adjacent_html({'selector':'.toast-container', 'html':html})
         broadcaster.broadcast()
         detail_args = {'id':element_id,}
