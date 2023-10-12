@@ -59,6 +59,7 @@ class Reflex:
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
 
+        kwargs.update(view.kwargs)
         context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
 
         for context_processor in settings.TEMPLATES[0]['OPTIONS']['context_processors']:
@@ -67,10 +68,13 @@ class Reflex:
             module = '.'.join(module)
             func = getattr(import_module(module), klassname)
             context.update(func(view.request))
-        if context.get('user'):
+
+        if context.get('user') and context.get('user').id:
             context.get('user').refresh_from_db()
+
         self.context = context
         self.context.update(**kwargs)
+
         return self.context
 
     def get_channel_id(self):
@@ -147,14 +151,14 @@ class Reflex:
         """detail gets piped into bootstrap toast options can be either autohide:False or delay:(ms) """
         from django.template import Context, Template as Template_django
         broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
-        
+
         element_id = 't' + token_urlsafe(4)
         toast_context.update(id=element_id)
         if 'body' in toast_context:
             t = Template_django(toast_context['body'])
             toast_context['body'] = t.render(Context(toast_context))
         html = render_to_string('toast.html', context=toast_context)
-        
+
         broadcaster.insert_adjacent_html({'selector':'.toast-container', 'html':html})
         broadcaster.broadcast()
         detail_args = {'id':element_id,}
