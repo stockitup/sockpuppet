@@ -4,6 +4,7 @@ from django.template.loader import render_to_string
 from django.template.backends.django import Template
 from django.urls import resolve
 from urllib.parse import urlparse
+from django.db import DatabaseError, connections, models, router, transaction
 
 from django.test import RequestFactory
 
@@ -51,6 +52,7 @@ class Reflex:
         view.request = self.request
         view.kwargs = resolved.kwargs
 
+
         # correct for detail and list views for django generic views
         if hasattr(view, "get_object"):
             view.object = view.get_object()
@@ -58,7 +60,8 @@ class Reflex:
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
 
-        context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
+
+        context = {}
 
         for context_processor in settings.TEMPLATES[0]['OPTIONS']['context_processors']:
             split = context_processor.split('.')
@@ -66,10 +69,22 @@ class Reflex:
             module = '.'.join(module)
             func = getattr(import_module(module), klassname)
             context.update(func(view.request))
-        if context.get('user'):
+
+        if context.get('user') and context.get('user').id:
             context.get('user').refresh_from_db()
+
+        print(context)
+
+        print(router.routers[0])
+        context.update(view.get_context_data(**{"stimulus_reflex": True, **kwargs}))
+
+        print(router.routers)
+        print(router.routers)
+        print(router.routers)
+
         self.context = context
         self.context.update(**kwargs)
+
         return self.context
 
     def get_channel_id(self):
