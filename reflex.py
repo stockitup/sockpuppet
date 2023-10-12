@@ -60,8 +60,8 @@ class Reflex:
         if hasattr(view, "paginate_queryset"):
             view.object_list = view.get_queryset()
 
-
-        context = {}
+        kwargs.update(view.kwargs)
+        context = view.get_context_data(**{"stimulus_reflex": True, **kwargs})
 
         for context_processor in settings.TEMPLATES[0]['OPTIONS']['context_processors']:
             split = context_processor.split('.')
@@ -72,15 +72,6 @@ class Reflex:
 
         if context.get('user') and context.get('user').id:
             context.get('user').refresh_from_db()
-
-        print(context)
-
-        print(router.routers[0])
-        context.update(view.get_context_data(**{"stimulus_reflex": True, **kwargs}))
-
-        print(router.routers)
-        print(router.routers)
-        print(router.routers)
 
         self.context = context
         self.context.update(**kwargs)
