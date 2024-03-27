@@ -127,10 +127,13 @@ class Reflex:
         else:
             if html != None:
                 html = html
-            elif isinstance(template, Template):
-                html = template.render(context)
             else:
-                html = render_to_string(template, context)
+                if 'request' not in context:
+                    context['request'] = self.request
+                if isinstance(template, Template):
+                    html = template.render(context)
+                else:
+                    html = render_to_string(template, context)
 
             broadcaster.morph({
                 'selector': selector,
