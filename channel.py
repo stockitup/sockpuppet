@@ -2,6 +2,7 @@ import json
 import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.template.loader import render_to_string
 
 from .utils import camelize_value, camelcase
 
@@ -156,7 +157,13 @@ class Channel:
         select_all:     true|false, # [false]     - operate on list of elements returned from selector
         selector:       "string",   # required    - string containing a CSS selector or XPath expression
         xpath:          true|false  # [false]     - process the selector as an XPath expression
+        template:          templatename  # [false]     -
+        context:          dict  # [false]     -
         """
+        if 'html' not in kwargs and 'template' in kwargs and 'context' in kwargs:
+            kwargs.update(html=render_to_string(kwargs['template'], kwargs['context']))
+            del kwargs['context']
+            del kwargs['template']
         options.update(kwargs)
         self.add_operation("insert_adjacent_html", options)
         return self
