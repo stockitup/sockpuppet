@@ -121,7 +121,7 @@ class BaseConsumer(JsonWebsocketConsumer):
     def receive_json(self, data, **kwargs):
         message_type = data.get("type")
         if message_type is None and data.get("target"):
-            with sentry_sdk.start_transaction(op="reflex", name=f"{data.get('url')} {data.get('target')}"):
+            with sentry_sdk.start_transaction(op="reflex", name=f"{data.get('url').replace(settings.BASE_URL, '')} {data.get('target')}"):
                 self.reflex_message(data, **kwargs)
         elif message_type == "subscribe":
             self.subscribe(data, **kwargs)
