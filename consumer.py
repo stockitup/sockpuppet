@@ -1,24 +1,23 @@
-import time
+import inspect
 import json
 import logging
-from importlib import import_module
-import inspect
+import time
 from functools import wraps
-from os import walk, path
-from urllib.parse import urlparse
-from urllib.parse import parse_qsl
+from importlib import import_module
+from os import path, walk
+from urllib.parse import parse_qsl, urlparse
 
+import sentry_sdk
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 from django.apps import apps
-from django.urls import resolve
 from django.conf import settings
+from django.urls import resolve
 
 from .channel import Channel
-from .reflex import PROTECTED_VARIABLES, Reflex
 from .element import Element
+from .reflex import PROTECTED_VARIABLES, Reflex
 from .utils import get_document_and_selectors, parse_out_html
-
 
 logger = logging.getLogger("sockpuppet")
 
@@ -122,7 +121,8 @@ class BaseConsumer(JsonWebsocketConsumer):
     def receive_json(self, data, **kwargs):
         message_type = data.get("type")
         if message_type is None and data.get("target"):
-            self.reflex_message(data, **kwargs)
+            with sentry_sdk.start_transaction(op="reflex", name=f"{data.get('url')} {data.get('target')}"):
+                self.reflex_message(data, **kwargs)
         elif message_type == "subscribe":
             self.subscribe(data, **kwargs)
         elif message_type == "unsubscribe":
