@@ -111,7 +111,7 @@ class Reflex:
         self.is_morph = True
         broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
 
-        no_arguments = [not selector, html == None, not context]
+        no_arguments = [not selector, html == None, not template]
         if all(no_arguments) and not selector:
             # an empty morph, dispatches an event with the name 'empty_morph', which does nothing.
             broadcaster.dispatch_event({
