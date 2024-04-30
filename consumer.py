@@ -197,27 +197,27 @@ class BaseConsumer(JsonWebsocketConsumer):
             self.broadcast_error(msg, data)
             return
 
-        try:
-            if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
-                # load them bitches:
-                from django.db import connection
-                with connection.cursor() as cursor:
-                    cursor.execute("select d_string, name, id from fafo_block where meta_data_id=4;", [])
-                    for row in cursor.fetchall():
-                        try:
-                            exec(f'{row[0]}\n')
-                        except Exception as e:
-                            logger.error(f'Failed to load {row[2]}.{row[1]}\n{e}')
-                        self.reflexes.update(
-                            {
-                                ReflexClass.__name__: ReflexClass
-                                for ReflexClass in Reflex.__subclasses__()
-                            }
-                        )
-        except Exception as e:
-            msg = f"Reflex couldn't be loaded: {str(e)}"
-            self.broadcast_error(msg, data)
-            return
+        # try:
+        #     if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
+        #         # load them bitches:
+        #         from django.db import connection
+        #         with connection.cursor() as cursor:
+        #             cursor.execute("select d_string, name, id from fafo_block where meta_data_id=4;", [])
+        #             for row in cursor.fetchall():
+        #                 try:
+        #                     exec(f'{row[0]}\n')
+        #                 except Exception as e:
+        #                     logger.error(f'Failed to load {row[2]}.{row[1]}\n{e}')
+        #                 self.reflexes.update(
+        #                     {
+        #                         ReflexClass.__name__: ReflexClass
+        #                         for ReflexClass in Reflex.__subclasses__()
+        #                     }
+        #                 )
+        # except Exception as e:
+        #     msg = f"Reflex couldn't be loaded: {str(e)}"
+        #     self.broadcast_error(msg, data)
+        #     return
 
         try:
             ReflexClass = self.reflexes.get(reflex_class_name)
