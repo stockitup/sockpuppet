@@ -1,3 +1,4 @@
+import re
 from importlib import import_module
 from secrets import token_urlsafe
 from django.conf import settings
@@ -36,6 +37,17 @@ class Reflex:
         self.permanent_attribute_name = permanent_attribute_name
         self.context = {}
         self.data = data or {}
+        self.buttler_client = None
+
+        if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
+            if 'headers' in consumer.scope:
+                origin = next((v.decode() for k,v in self.consumer.scope['headers'] if k == b'origin'), None)
+                if origin:
+                    match = re.search(r"https:\/\/(.*?)\.stockitup.nl", origin)
+                    if match:
+                        from buttler.models import Client
+                        subdomain = match.groups()[0]
+                        self.buttler_client = Client.objects.filter(subdomain=subdomain).first()
 
     def __repr__(self):
         return f"<Reflex url: {self.url}, session: {self.get_channel_id()}>"
