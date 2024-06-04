@@ -69,6 +69,12 @@ class BaseConsumer(JsonWebsocketConsumer):
             # normally there is no session key for anonymous users.
             session.save()
 
+        if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
+            origin = next((v.decode() for k,v in self.scope['headers'] if k == b'origin'), None)
+            if origin and 'buttler' not in origin:
+                session.set_expiry(3600)
+                session.save()
+
         async_to_sync(self.channel_layer.group_add)(
             session.session_key, self.channel_name
         )
