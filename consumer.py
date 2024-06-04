@@ -57,6 +57,11 @@ class BaseConsumer(JsonWebsocketConsumer):
         We use the user session key as a default channel to publish any events
         """
         super().connect()
+
+        # if 'session' not in self.scope:
+        #     self.websocket_disconnect('you have no power here')
+        #     return
+
         session = self.scope["session"]
         has_session_key = session.session_key
 
@@ -76,7 +81,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                     "meta_type": "cookie",
                     "key": "sessionid",
                     "value": session.session_key,
-                    "max_age": settings.SESSION_COOKIE_AGE,
+                    "max_age": 3600,
                 },
             )
 
@@ -88,23 +93,23 @@ class BaseConsumer(JsonWebsocketConsumer):
         """
         When we disconnect we unsubscribe from the user session key.
         """
-        import redis
-        r_channels = redis.Redis(db=0)
-        keys = r_channels.keys('asgi:group:*')
-        for key in keys:
-            key = key.decode()
+
+        if 'session' in self.scope:
+            import redis
+            r_channels = redis.Redis(db=0)
+            keys = r_channels.keys('asgi:group:*')
+            for key in keys:
+                key = key.decode()
+                async_to_sync(self.channel_layer.group_discard)(key.split(':')[2], self.channel_name)
+            session = self.scope["session"]
             async_to_sync(self.channel_layer.group_discard)(
-                key.split(':')[2], self.channel_name
+                session.session_key, self.channel_name
             )
-        session = self.scope["session"]
-        async_to_sync(self.channel_layer.group_discard)(
-            session.session_key, self.channel_name
-        )
-        logger.debug(
-            ":: DISCONNECT: Channel %s session: %s",
-            self.channel_name,
-            session.session_key,
-        )
+            logger.debug(
+                ":: DISCONNECT: Channel %s session: %s",
+                self.channel_name,
+                session.session_key,
+            )
         super().disconnect(*args, **kwargs)
 
     def subscribe(self, data, **kwargs):
@@ -220,6 +225,8 @@ class BaseConsumer(JsonWebsocketConsumer):
         #     return
 
         try:
+            # TODO(danilo): this whole class ordeal is ridiculous, purge the same way the js controllers got purged
+
             ReflexClass = self.reflexes.get(reflex_class_name)
             reflex = ReflexClass(
                 self, url=url,
