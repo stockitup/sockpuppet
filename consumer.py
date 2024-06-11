@@ -195,7 +195,10 @@ class BaseConsumer(JsonWebsocketConsumer):
         selectors = data['selectors'] if data['selectors'] else ['body']
         target = data['target']
         identifier = data['identifier']
-        reflex_class_name, method_name = target.split("#")
+        try:
+            reflex_class_name, method_name = target.split("#")
+        except:
+            logger.warning(f'reflex_message cannot split [{target}]')
         arguments = data['args'] if data.get('args') else []
         params = dict(parse_qsl(data['formData']))
         element = Element(data['attrs'])
