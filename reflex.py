@@ -38,6 +38,7 @@ class Reflex:
         self.context = {}
         self.data = data or {}
         self.buttler_client = None
+        self.is_dev = False
 
         if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
             if 'headers' in consumer.scope:
@@ -48,6 +49,13 @@ class Reflex:
                         from buttler.models import Client
                         subdomain = match.groups()[0]
                         self.buttler_client = Client.objects.filter(subdomain=subdomain).first()
+
+            if query_string := consumer.scope.get('query_string'):
+                query_string = query_string.decode()
+                if 'butt_dev_key' in query_string:
+                    from django.conf import settings
+                    if query_string.replace('butt_dev_key=','') in settings.DEV_KEYS:
+                        self.is_dev = True
 
     def __repr__(self):
         return f"<Reflex url: {self.url}, session: {self.get_channel_id()}>"
