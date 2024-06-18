@@ -40,6 +40,7 @@ class Reflex:
         self.buttler_client = None
         self.is_dev = False
 
+        from django.conf import settings
         if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
             if 'headers' in consumer.scope:
                 origin = next((v.decode() for k,v in self.consumer.scope['headers'] if k == b'origin'), None)
@@ -53,7 +54,6 @@ class Reflex:
             if query_string := consumer.scope.get('query_string'):
                 query_string = query_string.decode()
                 if 'butt_dev_key' in query_string:
-                    from django.conf import settings
                     if query_string.replace('butt_dev_key=','') in settings.DEV_KEYS:
                         self.is_dev = True
 
