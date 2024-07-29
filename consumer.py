@@ -13,6 +13,7 @@ from channels.generic.websocket import JsonWebsocketConsumer
 from django.apps import apps
 from django.conf import settings
 from django.urls import resolve
+from django_rq import get_connection
 
 from .channel import Channel
 from .element import Element
@@ -21,6 +22,10 @@ from .utils import get_document_and_selectors, parse_out_html
 
 logger = logging.getLogger("sockpuppet")
 
+def traceit(frame, event, arg):
+    # TODO(danilo): this needs filtering for the right dirs/modules (look at import trace for examples)
+    print(event, frame.f_lineno)
+    return traceit
 
 class SockpuppetError(Exception):
     pass
@@ -131,9 +136,40 @@ class BaseConsumer(JsonWebsocketConsumer):
 
     def receive_json(self, data, **kwargs):
         message_type = data.get("type")
+        redis_connection = get_connection()
         if message_type is None and data.get("target"):
-            with sentry_sdk.start_transaction(op="reflex", name=f"{data.get('url').replace(settings.BASE_URL, '')} {data.get('target')}"):
-                self.reflex_message(data, **kwargs)
+            # 1. sentry transactions:
+            # with sentry_sdk.start_transaction(op="reflex", name=f"{data.get('url').replace(settings.BASE_URL, '')} {data.get('target')}"):
+            #     self.reflex_message(data, **kwargs)
+
+            # 2. py trace
+            # import sys
+            # import threading
+
+            # def traceit(frame, event, arg):
+            #     print(event, frame.f_lineno)
+            #     return traceit
+            # threading.settrace(traceit)
+            # sys.settrace(traceit)
+            # try:
+            #     self.reflex_message(data, **kwargs)
+            # finally:
+            #     sys.settrace(None)
+            #     threading.settrace(None)
+
+            cpu_counter = time.process_time()
+            time_counter = time.perf_counter()
+
+            self.reflex_message(data, **kwargs)
+
+            cpu_time = (time.process_time() - cpu_counter) * 1000
+            reflex_time = (time.perf_counter() - time_counter) * 1000
+
+            redis_connection.set(f'siu:perf:reflexes:{data.get("target")}:cpu_time', cpu_time)
+            redis_connection.set(f'siu:perf:reflexes:{data.get("target")}:wall_time', reflex_time)
+
+            logger.warning(f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms", cpu_time, reflex_time)
+
         elif message_type == "subscribe":
             self.subscribe(data, **kwargs)
         elif message_type == "unsubscribe":
@@ -189,7 +225,6 @@ class BaseConsumer(JsonWebsocketConsumer):
     def reflex_message(self, data, **kwargs):
         logger.debug("Json: %s", data)
         logger.debug("kwargs: %s", kwargs)
-        start = time.perf_counter()
 
         url = data['url']
         selectors = data['selectors'] if data['selectors'] else ['body']
@@ -275,8 +310,6 @@ class BaseConsumer(JsonWebsocketConsumer):
             self.broadcast_error(msg, data, reflex)
             logging.exception(msg)
             return
-
-        logger.debug("Reflex took %6.2fms", (time.perf_counter() - start) * 1000)
 
     def render_page_and_broadcast_morph(self, reflex, selectors, data):
         if reflex.is_morph:
