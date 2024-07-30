@@ -7,6 +7,7 @@ from importlib import import_module
 from os import path, walk
 from urllib.parse import parse_qsl, urlparse
 
+import pyinstrument
 import sentry_sdk
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
@@ -157,18 +158,33 @@ class BaseConsumer(JsonWebsocketConsumer):
             #     sys.settrace(None)
             #     threading.settrace(None)
 
+            name = f"{data.get('target')}"
+
             cpu_counter = time.process_time()
             time_counter = time.perf_counter()
 
+            pyinstrument_profiler = None
+            if redis_connection.hexists('siu:perf:pyinstrument_list', name) or redis_connection.get('siu:perf:pyinstrument_reflexes'):
+                interval = float(redis_connection.get('siu:perf:pyinstrument_reflexes_interval') or 0.1)
+                pyinstrument_profiler = pyinstrument.Profiler(interval=interval)
+                pyinstrument_profiler.start()
+
             self.reflex_message(data, **kwargs)
 
+            if pyinstrument_profiler and pyinstrument_profiler.is_running:
+                pyinstrument_session = pyinstrument_profiler.stop()
+                if pyinstrument_session.sample_count > 0:
+                    pyinstrument_output = pyinstrument_profiler.output_text()
+                    logger.warning('pyinstrument %s\n  %s', name, pyinstrument_output)
+                    redis_connection.set(f'siu:perf:reflexes:{name}:pyinstrument', pyinstrument_output)
+
             cpu_time = (time.process_time() - cpu_counter) * 1000
-            reflex_time = (time.perf_counter() - time_counter) * 1000
+            wall_time = (time.perf_counter() - time_counter) * 1000
 
-            redis_connection.set(f'siu:perf:reflexes:{data.get("target")}:cpu_time', cpu_time)
-            redis_connection.set(f'siu:perf:reflexes:{data.get("target")}:wall_time', reflex_time)
+            redis_connection.set(f'siu:perf:reflexes:{name}:cpu_time', cpu_time)
+            redis_connection.set(f'siu:perf:reflexes:{name}:wall_time', wall_time)
 
-            logger.warning(f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms", cpu_time, reflex_time)
+            logger.warning(f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms", cpu_time, wall_time)
 
         elif message_type == "subscribe":
             self.subscribe(data, **kwargs)
