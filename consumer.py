@@ -17,17 +17,14 @@ from django.urls import resolve
 from django.utils import timezone
 from django_rq import get_connection
 
+from siu_trace import traceit
+
 from .channel import Channel
 from .element import Element
 from .reflex import PROTECTED_VARIABLES, Reflex
 from .utils import get_document_and_selectors, parse_out_html
 
 logger = logging.getLogger("sockpuppet")
-
-def traceit(frame, event, arg):
-    # TODO(danilo): this needs filtering for the right dirs/modules (look at import trace for examples)
-    print(event, frame.f_lineno)
-    return traceit
 
 class SockpuppetError(Exception):
     pass
