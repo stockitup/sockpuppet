@@ -14,6 +14,7 @@ from channels.generic.websocket import JsonWebsocketConsumer
 from django.apps import apps
 from django.conf import settings
 from django.urls import resolve
+from django.utils import timezone
 from django_rq import get_connection
 
 from .channel import Channel
@@ -183,6 +184,46 @@ class BaseConsumer(JsonWebsocketConsumer):
 
             redis_connection.set(f'siu:perf:reflexes:{name}:cpu_time', cpu_time)
             redis_connection.set(f'siu:perf:reflexes:{name}:wall_time', wall_time)
+
+            date = timezone.now().date().isoformat()
+
+            if not redis_connection.exists(f'siu:perf:reflexes:{name}:{date}'):
+                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'count', 0)
+                redis_connection.expire(f'siu:perf:reflexes:{name}:{date}', 604800)
+
+            redis_connection.hincrby(f'siu:perf:reflexes:{name}:{date}', 'count', 1)
+            redis_connection.hincrbyfloat(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_total', cpu_time)
+            redis_connection.hincrbyfloat(f'siu:perf:reflexes:{name}:{date}', 'wall_time_total', wall_time)
+
+
+
+            if wall_time_min_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min'):
+                if wall_time < float(wall_time_min_raw.decode()):
+                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min', wall_time)
+            else:
+                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min', wall_time)
+
+            if wall_time_max_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max'):
+                if wall_time > float(wall_time_max_raw.decode()):
+                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max', wall_time)
+            else:
+                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max', wall_time)
+
+
+
+            if cpu_time_min_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min'):
+                if cpu_time < float(cpu_time_min_raw.decode()):
+                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min', cpu_time)
+            else:
+                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min', cpu_time)
+
+            if cpu_time_max_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max'):
+                if cpu_time > float(cpu_time_max_raw.decode()):
+                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max', cpu_time)
+            else:
+                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max', cpu_time)
+
+
 
             logger.warning(f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms", cpu_time, wall_time)
 
