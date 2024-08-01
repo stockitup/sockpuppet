@@ -17,7 +17,7 @@ from django.urls import resolve
 from django.utils import timezone
 from django_rq import get_connection
 
-from siu_trace import traceit
+# from siu_trace import traceit
 
 from .channel import Channel
 from .element import Element
