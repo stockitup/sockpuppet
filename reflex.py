@@ -135,7 +135,7 @@ class Reflex:
         if all(no_arguments) and not selector:
             # an empty morph, dispatches an event with the name 'empty_morph', which does nothing.
             broadcaster.dispatch_event({
-                'name': 'empty_morph',
+                'name': 'emptymorph',
                 'detail': {
                     'stimulus_reflex': {
                         'reflexId': self.reflex_id,
