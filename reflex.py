@@ -154,6 +154,42 @@ class Reflex:
                 else:
                     html = render_to_string(template, context)
 
+            if html and settings.DEBUG:
+                # validate HTML
+                from html.parser import HTMLParser
+                class TagValidator(HTMLParser):
+                    def __init__(self):
+                        super().__init__()
+                        self.stack = []
+                        self.is_valid = True
+                        self.self_closing_tags = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
+
+                    def handle_starttag(self, tag, attrs):
+                        # print(self.is_valid, 'start', self.stack, tag, attrs)
+                        if tag not in self.self_closing_tags:
+                            self.stack.append(tag)
+
+                    def handle_endtag(self, tag):
+                        # print(self.is_valid, 'end', self.stack, tag)
+                        if tag not in self.self_closing_tags:
+                            if (not self.stack or self.stack[-1] != tag):
+                                self.is_valid = False
+                            else:
+                                self.stack.pop()
+
+                    def validate(self, html):
+                        self.stack = []
+                        self.is_valid = True
+                        self.feed(html)
+                        return self.is_valid and not self.stack
+
+                validator = TagValidator()
+                is_valid = validator.validate(html)
+
+                if not is_valid:
+                    error_banner = f'<div class="text-bg-danger">Mismatched HTML tag</div>'
+                    html = error_banner + html
+
             broadcaster.morph({
                 'selector': selector,
                 'html': html,
