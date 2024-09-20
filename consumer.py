@@ -172,7 +172,7 @@ class BaseConsumer(JsonWebsocketConsumer):
             if pyinstrument_profiler and pyinstrument_profiler.is_running:
                 pyinstrument_session = pyinstrument_profiler.stop()
                 if pyinstrument_session.sample_count > 0:
-                    pyinstrument_output = pyinstrument_profiler.output_text(show_all=True).replace('|', '')
+                    pyinstrument_output = pyinstrument_profiler.output_text(show_all=True).replace('|', '').replace('`', '').replace('-', '')
                     logger.warning('pyinstrument %s\n  %s', name, pyinstrument_output)
                     redis_connection.set(f'siu:perf:reflexes:{name}:pyinstrument', pyinstrument_output)
 
