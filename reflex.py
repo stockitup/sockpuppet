@@ -154,7 +154,7 @@ class Reflex:
                 else:
                     html = render_to_string(template, context)
 
-            if html and settings.DEBUG:
+            if html and settings.DEBUG and settings.DEBUG_HTML_VALIDATION:
                 # validate HTML
                 from html.parser import HTMLParser
                 class TagValidator(HTMLParser):
