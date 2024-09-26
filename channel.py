@@ -259,10 +259,8 @@ class Channel:
         cancel:     true|false, # [false]  - cancel the operation (for use on client)
         select_all: true|false, # [false]  - operate on list of elements returned from selector
         selector:   "string",   # required - string containing a CSS selector or XPath expression
-        styles: {
-            background: "red",
-            color: "white"
-        },
+        name:       "string"    # required - style name
+        name:       "string"    # required - style value
         xpath:      true|false  # [false]  - process the selector as an XPath expression
         """
         options.update(kwargs)
