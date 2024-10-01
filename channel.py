@@ -260,7 +260,7 @@ class Channel:
         select_all: true|false, # [false]  - operate on list of elements returned from selector
         selector:   "string",   # required - string containing a CSS selector or XPath expression
         name:       "string"    # required - style name
-        name:       "string"    # required - style value
+        value:       "string"    # required - style value
         xpath:      true|false  # [false]  - process the selector as an XPath expression
         """
         options.update(kwargs)
