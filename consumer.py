@@ -298,6 +298,7 @@ class BaseConsumer(JsonWebsocketConsumer):
         except Exception as e:
             msg = f"Reflex couldn't be loaded: {str(e)}"
             self.broadcast_error(msg, data)
+            logger.warning((msg,data))
             return
 
         # try:
