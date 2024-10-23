@@ -8,21 +8,22 @@ from os import path, walk
 from urllib.parse import parse_qsl, urlparse
 
 import pyinstrument
-import sentry_sdk
 from asgiref.sync import async_to_sync
-from channels.generic.websocket import JsonWebsocketConsumer
 from django.apps import apps
 from django.conf import settings
 from django.urls import resolve
 from django.utils import timezone
 from django_rq import get_connection
 
-# from siu_trace import traceit
+from channels.generic.websocket import JsonWebsocketConsumer
 
 from .channel import Channel
 from .element import Element
 from .reflex import PROTECTED_VARIABLES, Reflex
 from .utils import get_document_and_selectors, parse_out_html
+
+# from siu_trace import traceit
+
 
 logger = logging.getLogger("sockpuppet")
 

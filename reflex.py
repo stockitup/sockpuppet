@@ -39,6 +39,7 @@ class Reflex:
         self.data = data or {}
         self.buttler_client = None
         self.is_dev = False
+        self.user_id = None
 
         from django.conf import settings
         if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
@@ -54,8 +55,16 @@ class Reflex:
             if query_string := consumer.scope.get('query_string'):
                 query_string = query_string.decode()
                 if 'butt_dev_key' in query_string:
-                    if query_string.replace('butt_dev_key=','') in settings.DEV_KEYS:
-                        self.is_dev = True
+
+                    stream_key = query_string.replace('butt_dev_key=','')
+                    if stream_key:
+                        from django.db import connection
+                        with connection.cursor() as cursor:
+                            cursor.execute("SELECT id FROM accounts_user WHERE stream_key = %s", [stream_key])
+                            row = cursor.fetchone()
+                            if row:
+                                self.user_id = row[0]
+                                self.is_dev = True
 
     def __repr__(self):
         return f"<Reflex url: {self.url}, session: {self.get_channel_id()}>"
@@ -108,7 +117,12 @@ class Reflex:
         factory = RequestFactory()
         request = factory.get(self.url)
         request.session = self.consumer.scope["session"]
-        request.user = self.consumer.scope["user"]
+        if self.user_id:
+            from accounts.models import User
+            request.user = User.objects.filter(id=self.user_id).first()
+        else:
+            request.user = self.consumer.scope["user"]
+
         request.POST = self.params
         return request
 
