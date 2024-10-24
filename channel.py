@@ -8,6 +8,7 @@ from .utils import camelize_value, camelcase
 
 logger = logging.getLogger(__name__)
 
+# TODO(danilo): deprecate this whole file
 
 class Channel:
     """
@@ -53,7 +54,9 @@ class Channel:
             "set_style": [],
             "set_value": [],
             "text_content": [],
-            "javascript": [],
+            "javascript": [], # deprecate this
+            "data": [],
+            "windowData": [],
         }
 
     def broadcast(self):
@@ -276,3 +279,19 @@ class Channel:
         self.add_operation("javascript", options)
         return self
 
+    def data(self, options={}, **kwargs):
+        """
+        vars:     {}, # - variables you'll get in .then(data =>) # this doesn't work yet...
+        """
+        options.update(kwargs)
+        self.add_operation("data", options)
+        return self
+
+    def windowData(self, options={}, **kwargs):
+        """
+        name:     "string", # required - var on window where you want your data
+        data:     {}, # - data to pass to window var
+        """
+        options.update(kwargs)
+        self.add_operation("windowData", options)
+        return self
