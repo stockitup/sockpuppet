@@ -57,6 +57,7 @@ class Channel:
             "javascript": [], # deprecate this
             "data": [],
             "windowData": [],
+            "consoleLog": [],
         }
 
     def broadcast(self):
@@ -294,4 +295,13 @@ class Channel:
         """
         options.update(kwargs)
         self.add_operation("windowData", options)
+        return self
+
+    def consoleLog(self, options={}, **kwargs):
+        """
+        message:     "string", # required - string to log
+        level:     "string", # required - string to log
+        """
+        options.update(kwargs)
+        self.add_operation("consoleLog", options)
         return self

@@ -29,7 +29,6 @@ class Reflex:
         self.url = url
         self.element = element
         self.selectors = selectors
-        self.session = consumer.scope["session"]
         self.params = params
         self.identifier = identifier
         self.is_morph = False
@@ -40,6 +39,11 @@ class Reflex:
         self.buttler_client = None
         self.is_dev = False
         self.user_id = None
+
+        self.session = consumer.scope["session"]
+        if self.session and self.session.session_key:
+            from django.contrib.sessions.backends.cache import SessionStore
+            self.session = SessionStore(session_key=self.session.session_key)
 
         from django.conf import settings
         if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
@@ -116,7 +120,7 @@ class Reflex:
     def request(self):
         factory = RequestFactory()
         request = factory.get(self.url)
-        request.session = self.consumer.scope["session"]
+        request.session = self.session
         if self.user_id:
             from accounts.models import User
             request.user = User.objects.filter(id=self.user_id).first()
