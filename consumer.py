@@ -278,8 +278,15 @@ class BaseConsumer(JsonWebsocketConsumer):
                     append_reflex()
 
     def reflex_message(self, data, **kwargs):
-        logger.debug("Json: %s", data)
-        logger.debug("kwargs: %s", kwargs)
+        logger.debug("RECEIVED Json: %s", data)
+        logger.debug("RECEIVED kwargs: %s", kwargs)
+
+        if settings.DEBUG:
+            import os
+            filename = data['target'].replace("/", "_")
+            os.makedirs("/tmp/reflex_message/", exist_ok=True)
+            with open(f"/tmp/reflex_message/{filename}.txt", "w", encoding="utf-8") as file:
+                json.dump(data, file)
 
         url = data['url']
         selectors = data['selectors'] if data['selectors'] else ['body']
