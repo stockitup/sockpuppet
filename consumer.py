@@ -27,6 +27,7 @@ from .utils import get_document_and_selectors, parse_out_html
 
 logger = logging.getLogger("sockpuppet")
 
+
 class SockpuppetError(Exception):
     pass
 
@@ -74,9 +75,11 @@ class BaseConsumer(JsonWebsocketConsumer):
             # normally there is no session key for anonymous users.
             session.save()
 
-        if settings.DATABASES.get('default', {}).get('NAME', '') == 'buttler':
-            origin = next((v.decode() for k,v in self.scope['headers'] if k == b'origin'), None)
-            if origin and 'buttler' not in origin:
+        if settings.DATABASES.get("default", {}).get("NAME", "") == "buttler":
+            origin = next(
+                (v.decode() for k, v in self.scope["headers"] if k == b"origin"), None
+            )
+            if origin and "buttler" not in origin:
                 session.set_expiry(3600)
                 session.save()
 
@@ -105,13 +108,16 @@ class BaseConsumer(JsonWebsocketConsumer):
         When we disconnect we unsubscribe from the user session key.
         """
 
-        if 'session' in self.scope:
+        if "session" in self.scope:
             import redis
+
             r_channels = redis.Redis(db=0)
-            keys = r_channels.keys('asgi:group:*')
+            keys = r_channels.keys("asgi:group:*")
             for key in keys:
                 key = key.decode()
-                async_to_sync(self.channel_layer.group_discard)(key.split(':')[2], self.channel_name)
+                async_to_sync(self.channel_layer.group_discard)(
+                    key.split(":")[2], self.channel_name
+                )
             session = self.scope["session"]
             async_to_sync(self.channel_layer.group_discard)(
                 session.session_key, self.channel_name
@@ -129,7 +135,7 @@ class BaseConsumer(JsonWebsocketConsumer):
         async_to_sync(self.channel_layer.group_add)(name, self.channel_name)
 
     def unsubscribe(self, data, **kwargs):
-        if 'channelName' not in data:
+        if "channelName" not in data:
             return
         name = self._get_channelname(data["channelName"])
         async_to_sync(self.channel_layer.group_discard)(name, self.channel_name)
@@ -163,8 +169,13 @@ class BaseConsumer(JsonWebsocketConsumer):
             time_counter = time.perf_counter()
 
             pyinstrument_profiler = None
-            if redis_connection.hexists('siu:perf:pyinstrument_list', name) or redis_connection.get('siu:perf:pyinstrument_reflexes'):
-                interval = float(redis_connection.get('siu:perf:pyinstrument_reflexes_interval') or 0.1)
+            if redis_connection.hexists(
+                "siu:perf:pyinstrument_list", name
+            ) or redis_connection.get("siu:perf:pyinstrument_reflexes"):
+                interval = float(
+                    redis_connection.get("siu:perf:pyinstrument_reflexes_interval")
+                    or 0.1
+                )
                 pyinstrument_profiler = pyinstrument.Profiler(interval=interval)
                 pyinstrument_profiler.start()
 
@@ -173,57 +184,87 @@ class BaseConsumer(JsonWebsocketConsumer):
             if pyinstrument_profiler and pyinstrument_profiler.is_running:
                 pyinstrument_session = pyinstrument_profiler.stop()
                 if pyinstrument_session.sample_count > 0:
-                    pyinstrument_output = pyinstrument_profiler.output_text(show_all=True)
-                    logger.warning('pyinstrument %s\n  %s', name, pyinstrument_output)
-                    redis_connection.set(f'siu:perf:reflexes:{name}:pyinstrument', pyinstrument_output)
+                    pyinstrument_output = pyinstrument_profiler.output_text(
+                        show_all=True
+                    )
+                    logger.warning("pyinstrument %s\n  %s", name, pyinstrument_output)
+                    redis_connection.set(
+                        f"siu:perf:reflexes:{name}:pyinstrument", pyinstrument_output
+                    )
 
             cpu_time = (time.process_time() - cpu_counter) * 1000
             wall_time = (time.perf_counter() - time_counter) * 1000
 
-            redis_connection.set(f'siu:perf:reflexes:{name}:cpu_time', cpu_time)
-            redis_connection.set(f'siu:perf:reflexes:{name}:wall_time', wall_time)
+            redis_connection.set(f"siu:perf:reflexes:{name}:cpu_time", cpu_time)
+            redis_connection.set(f"siu:perf:reflexes:{name}:wall_time", wall_time)
 
             date = timezone.now().date().isoformat()
 
-            if not redis_connection.exists(f'siu:perf:reflexes:{name}:{date}'):
-                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'count', 0)
-                redis_connection.expire(f'siu:perf:reflexes:{name}:{date}', 604800)
+            if not redis_connection.exists(f"siu:perf:reflexes:{name}:{date}"):
+                redis_connection.hset(f"siu:perf:reflexes:{name}:{date}", "count", 0)
+                redis_connection.expire(f"siu:perf:reflexes:{name}:{date}", 604800)
 
-            redis_connection.hincrby(f'siu:perf:reflexes:{name}:{date}', 'count', 1)
-            redis_connection.hincrbyfloat(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_total', cpu_time)
-            redis_connection.hincrbyfloat(f'siu:perf:reflexes:{name}:{date}', 'wall_time_total', wall_time)
+            redis_connection.hincrby(f"siu:perf:reflexes:{name}:{date}", "count", 1)
+            redis_connection.hincrbyfloat(
+                f"siu:perf:reflexes:{name}:{date}", "cpu_time_total", cpu_time
+            )
+            redis_connection.hincrbyfloat(
+                f"siu:perf:reflexes:{name}:{date}", "wall_time_total", wall_time
+            )
 
-
-
-            if wall_time_min_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min'):
+            if wall_time_min_raw := redis_connection.hget(
+                f"siu:perf:reflexes:{name}:{date}", "wall_time_min"
+            ):
                 if wall_time < float(wall_time_min_raw.decode()):
-                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min', wall_time)
+                    redis_connection.hset(
+                        f"siu:perf:reflexes:{name}:{date}", "wall_time_min", wall_time
+                    )
             else:
-                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_min', wall_time)
+                redis_connection.hset(
+                    f"siu:perf:reflexes:{name}:{date}", "wall_time_min", wall_time
+                )
 
-            if wall_time_max_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max'):
+            if wall_time_max_raw := redis_connection.hget(
+                f"siu:perf:reflexes:{name}:{date}", "wall_time_max"
+            ):
                 if wall_time > float(wall_time_max_raw.decode()):
-                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max', wall_time)
+                    redis_connection.hset(
+                        f"siu:perf:reflexes:{name}:{date}", "wall_time_max", wall_time
+                    )
             else:
-                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'wall_time_max', wall_time)
+                redis_connection.hset(
+                    f"siu:perf:reflexes:{name}:{date}", "wall_time_max", wall_time
+                )
 
-
-
-            if cpu_time_min_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min'):
+            if cpu_time_min_raw := redis_connection.hget(
+                f"siu:perf:reflexes:{name}:{date}", "cpu_time_min"
+            ):
                 if cpu_time < float(cpu_time_min_raw.decode()):
-                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min', cpu_time)
+                    redis_connection.hset(
+                        f"siu:perf:reflexes:{name}:{date}", "cpu_time_min", cpu_time
+                    )
             else:
-                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_min', cpu_time)
+                redis_connection.hset(
+                    f"siu:perf:reflexes:{name}:{date}", "cpu_time_min", cpu_time
+                )
 
-            if cpu_time_max_raw := redis_connection.hget(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max'):
+            if cpu_time_max_raw := redis_connection.hget(
+                f"siu:perf:reflexes:{name}:{date}", "cpu_time_max"
+            ):
                 if cpu_time > float(cpu_time_max_raw.decode()):
-                    redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max', cpu_time)
+                    redis_connection.hset(
+                        f"siu:perf:reflexes:{name}:{date}", "cpu_time_max", cpu_time
+                    )
             else:
-                redis_connection.hset(f'siu:perf:reflexes:{name}:{date}', 'cpu_time_max', cpu_time)
+                redis_connection.hset(
+                    f"siu:perf:reflexes:{name}:{date}", "cpu_time_max", cpu_time
+                )
 
-
-
-            logger.warning(f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms", cpu_time, wall_time)
+            logger.warning(
+                f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms",
+                cpu_time,
+                wall_time,
+            )
 
         elif message_type == "subscribe":
             self.subscribe(data, **kwargs)
@@ -283,22 +324,25 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         if settings.DEBUG:
             import os
-            filename = data['target'].replace("/", "_")
+
+            filename = data["target"].replace("/", "_")
             os.makedirs("/tmp/reflex_message/", exist_ok=True)
-            with open(f"/tmp/reflex_message/{filename}.txt", "w", encoding="utf-8") as file:
+            with open(
+                f"/tmp/reflex_message/{filename}.txt", "w", encoding="utf-8"
+            ) as file:
                 json.dump(data, file)
 
-        url = data['url']
-        selectors = data['selectors'] if data['selectors'] else ['body']
-        target = data['target']
-        identifier = data['identifier']
+        url = data["url"]
+        selectors = data["selectors"] if data["selectors"] else ["body"]
+        target = data["target"]
+        identifier = data["identifier"]
         try:
             reflex_class_name, method_name = target.split("#")
         except:
-            logger.warning(f'reflex_message cannot split [{target}]')
-        arguments = data['args'] if data.get('args') else []
-        params = dict(parse_qsl(data['formData']))
-        element = Element(data['attrs'])
+            logger.warning(f"reflex_message cannot split [{target}]")
+        arguments = data["args"] if data.get("args") else []
+        params = dict(parse_qsl(data["formData"]))
+        element = Element(data["attrs"])
 
         try:
             if not self.reflexes:
@@ -306,7 +350,7 @@ class BaseConsumer(JsonWebsocketConsumer):
         except Exception as e:
             msg = f"Reflex couldn't be loaded: {str(e)}"
             self.broadcast_error(msg, data)
-            logger.warning((msg,data))
+            logger.warning((msg, data))
             return
 
         # try:
@@ -336,13 +380,14 @@ class BaseConsumer(JsonWebsocketConsumer):
 
             ReflexClass = self.reflexes.get(reflex_class_name)
             reflex = ReflexClass(
-                self, url=url,
+                self,
+                url=url,
                 element=element,
                 selectors=selectors,
                 identifier=identifier,
                 params=params,
-                reflex_id=data['reflexId'],
-                data=data
+                reflex_id=data["reflexId"],
+                data=data,
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
             if reflex.session.modified:
@@ -408,7 +453,7 @@ class BaseConsumer(JsonWebsocketConsumer):
         # )
 
         request = reflex.request
-        request.META['HTTP_HOST'] = settings.SERVER_NAME
+        request.META["HTTP_HOST"] = settings.SERVER_NAME
         response = view(request, *resolved.args, **resolved.kwargs)
         # we've got the response, the function needs to work as normal again
         # view.view_class.get_context_data = original_context_data

@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 # TODO(danilo): deprecate this whole file
 
+
 class Channel:
     """
     Accepts a name which should either be the name of the group
@@ -54,7 +55,7 @@ class Channel:
             "set_style": [],
             "set_value": [],
             "text_content": [],
-            "javascript": [], # deprecate this
+            "javascript": [],  # deprecate this
             "data": [],
             "windowData": [],
             "consoleLog": [],
@@ -63,7 +64,7 @@ class Channel:
     def broadcast(self):
         operations = {}
         for key, value in self.operations.items():
-            if value and key not in ['data', 'windowData', 'consoleLog']:
+            if value and key not in ["data", "windowData", "consoleLog"]:
                 operations[camelcase(key)] = camelize_value(value)
             elif value:
                 operations[key] = value
@@ -76,12 +77,12 @@ class Channel:
             "operations": operations,
         }
 
-        if 'specific.' in self.name:
+        if "specific." in self.name:
             fun = async_to_sync(channel_layer.send)
             fun(self.name, message)
-            message['identifier'] = f'{{"channel":"{self.name.split("!")[1]}"}}'
+            message["identifier"] = f'{{"channel":"{self.name.split("!")[1]}"}}'
             fun = async_to_sync(channel_layer.group_send)
-            fun(self.name.split('!')[1], message)
+            fun(self.name.split("!")[1], message)
         else:
             fun = async_to_sync(channel_layer.group_send)
             fun(self.name, message)
@@ -166,10 +167,10 @@ class Channel:
         template:          templatename  # [false]     -
         context:          dict  # [false]     -
         """
-        if 'html' not in kwargs and 'template' in kwargs and 'context' in kwargs:
-            kwargs.update(html=render_to_string(kwargs['template'], kwargs['context']))
-            del kwargs['context']
-            del kwargs['template']
+        if "html" not in kwargs and "template" in kwargs and "context" in kwargs:
+            kwargs.update(html=render_to_string(kwargs["template"], kwargs["context"]))
+            del kwargs["context"]
+            del kwargs["template"]
         options.update(kwargs)
         self.add_operation("insert_adjacent_html", options)
         return self
