@@ -345,6 +345,8 @@ class BaseConsumer(JsonWebsocketConsumer):
                 data=data
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
+            if reflex.session.modified:
+                reflex.session.save()
         except TypeError as exc:
             if not self.reflexes.get(reflex_class_name):
                 msg = f"Sockpuppet tried to find a reflex class called {reflex_class_name}. Are you sure such a class exists?"  # noqa

@@ -61,11 +61,13 @@ class Channel:
         }
 
     def broadcast(self):
-        operations = {
-            camelcase(key): camelize_value(value)
-            for key, value in self.operations.items()
-            if value
-        }
+        operations = {}
+        for key, value in self.operations.items():
+            if value and key not in ['data', 'windowData', 'consoleLog']:
+                operations[camelcase(key)] = camelize_value(value)
+            elif value:
+                operations[key] = value
+
         channel_layer = get_channel_layer()
         message = {
             "identifier": self.identifier,
