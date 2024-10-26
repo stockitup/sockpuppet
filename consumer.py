@@ -9,13 +9,12 @@ from urllib.parse import parse_qsl, urlparse
 
 import pyinstrument
 from asgiref.sync import async_to_sync
+from channels.generic.websocket import JsonWebsocketConsumer
 from django.apps import apps
 from django.conf import settings
 from django.urls import resolve
 from django.utils import timezone
 from django_rq import get_connection
-
-from channels.generic.websocket import JsonWebsocketConsumer
 
 from .channel import Channel
 from .element import Element
@@ -390,7 +389,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                 data=data,
             )
             self.delegate_call_to_reflex(reflex, method_name, arguments)
-            if reflex.session.modified:
+            if reflex.session is not None:
                 reflex.session.save()
         except TypeError as exc:
             if not self.reflexes.get(reflex_class_name):
