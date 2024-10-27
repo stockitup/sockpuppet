@@ -497,10 +497,12 @@ class BaseConsumer(JsonWebsocketConsumer):
             getattr(reflex, method_name)(*arguments)
 
     def broadcast_error(self, message, data, reflex=None):
-        # We may have a sitation where we weren't able to get a reflex
+        # We may have a situation where we weren't able to get a reflex
         session_key = (
             reflex.get_channel_id() if reflex else self.scope["session"].session_key
         )
+        if not 'identifier' in data:
+            data['identifier'] = reflex.identifier if reflex else session_key
         channel = Channel(session_key, identifier=data["identifier"])
         data.update(
             {
@@ -514,6 +516,32 @@ class BaseConsumer(JsonWebsocketConsumer):
             {
                 "name": "stimulus-reflex:server-message",
                 "detail": {"stimulus_reflex": data},
+            }
+        )
+        channel.broadcast()
+
+    def broadcast_server_data(self, data, reflex=None):
+        session_key = (
+            reflex.get_channel_id() if reflex else self.scope["session"].session_key
+        )
+
+        stimulus_data = {}
+
+        if not 'identifier' in data:
+            stimulus_data['identifier'] = reflex.identifier if reflex else session_key
+        else:
+            stimulus_data['identifier'] = data.pop('identifier')
+
+        if reflex:
+            stimulus_data['reflexId'] = reflex.reflex_id
+
+        channel = Channel(session_key, identifier=stimulus_data['identifier'])
+
+        channel.dispatch_event(
+            {
+                "name": "stimulus-reflex:server-message",
+                "detail": {"stimulus_reflex": stimulus_data},
+                "response": data,
             }
         )
         channel.broadcast()
