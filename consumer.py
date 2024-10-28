@@ -537,9 +537,9 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         channel = Channel(session_key, identifier=stimulus_data['identifier'])
 
-        channel.dispatch_event(
+        channel.data(
             {
-                "name": "stimulus-reflex:server-message",
+                "name": "data",
                 "detail": {"stimulus_reflex": stimulus_data},
                 "response": data,
             }
