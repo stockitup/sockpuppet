@@ -501,8 +501,8 @@ class BaseConsumer(JsonWebsocketConsumer):
         session_key = (
             reflex.get_channel_id() if reflex else self.scope["session"].session_key
         )
-        if not 'identifier' in data:
-            data['identifier'] = reflex.identifier if reflex else session_key
+        if not "identifier" in data:
+            data["identifier"] = reflex.identifier if reflex else session_key
         channel = Channel(session_key, identifier=data["identifier"])
         data.update(
             {
@@ -527,15 +527,15 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         stimulus_data = {}
 
-        if not 'identifier' in data:
-            stimulus_data['identifier'] = reflex.identifier if reflex else session_key
+        if not "identifier" in data:
+            stimulus_data["identifier"] = reflex.identifier if reflex else session_key
         else:
-            stimulus_data['identifier'] = data.pop('identifier')
+            stimulus_data["identifier"] = data.pop("identifier")
 
         if reflex:
-            stimulus_data['reflexId'] = reflex.reflex_id
+            stimulus_data["reflexId"] = reflex.reflex_id
 
-        channel = Channel(session_key, identifier=stimulus_data['identifier'])
+        channel = Channel(session_key, identifier=stimulus_data["identifier"])
 
         channel.data(
             {
