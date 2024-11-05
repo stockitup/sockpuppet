@@ -130,14 +130,14 @@ class BaseConsumer(JsonWebsocketConsumer):
 
     def subscribe(self, data, **kwargs):
         name = self._get_channelname(data["channelName"])
-        logger.warning("Subscribe %s to %s", self.channel_name, name)
+        logger.debug("Subscribe %s to %s", self.channel_name, name)
         async_to_sync(self.channel_layer.group_add)(name, self.channel_name)
 
     def unsubscribe(self, data, **kwargs):
         if "channelName" not in data:
             return
         name = self._get_channelname(data["channelName"])
-        logger.warning("Unsubscribe %s from %s", self.channel_name, name)
+        logger.debug("Unsubscribe %s from %s", self.channel_name, name)
         async_to_sync(self.channel_layer.group_discard)(name, self.channel_name)
 
     def receive_json(self, data, **kwargs):
