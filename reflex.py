@@ -1,12 +1,13 @@
 import re
 from importlib import import_module
 from secrets import token_urlsafe
-from django.conf import settings
-from django.template.loader import render_to_string
-from django.template.backends.django import Template
-from django.urls import resolve
 from urllib.parse import urlparse
+
+from django.conf import settings
+from django.template.backends.django import Template
+from django.template.loader import render_to_string
 from django.test import RequestFactory
+from django.urls import resolve
 
 from .channel import Channel
 
@@ -269,22 +270,27 @@ class Reflex:
 
     def send_toast(self, toast_context, detail: dict):
         """detail gets piped into bootstrap toast options can be either autohide:False or delay:(ms)"""
-        from django.template import Context, Template as Template_django
+        from django.template import Context
+        from django.template import Template as Template_django
 
         broadcaster = Channel(self.consumer.channel_name, identifier=self.identifier)
 
-        element_id = "t" + token_urlsafe(4)
-        toast_context.update(id=element_id)
-        if "body" in toast_context:
-            t = Template_django(toast_context["body"])
-            toast_context["body"] = t.render(Context(toast_context))
-        html = render_to_string("toast.html", context=toast_context)
-
-        broadcaster.insert_adjacent_html({"selector": ".toast-container", "html": html})
-        broadcaster.broadcast()
-        detail_args = {
-            "id": element_id,
+        alert_configs = {
+            "bg-success": {
+                "icon": "fas fa-check-circle",
+                "alert_class": "alert-success",
+            },
+            "bg-danger": {
+                "icon": "fas fa-exclamation-triangle",
+                "alert_class": "alert-danger",
+            },
+            "bg-warning": {
+                "icon": "fas fa-exclamation-triangle",
+                "alert_class": "alert-warning",
+            },
+            "default": {"icon": "fas fa-info-circle", "alert_class": "alert-primary"},
         }
-        detail_args.update(detail)
-        broadcaster.dispatch_event({"name": "toast", "detail": detail_args})
+        toast_context.update(**alert_configs[toast_context.get("bg_color", "default")])
+        html = render_to_string("toast.html", context=toast_context)
+        broadcaster.insert_adjacent_html({"selector": ".toast-container", "html": html})
         broadcaster.broadcast()
