@@ -290,7 +290,11 @@ class Reflex:
             },
             "default": {"icon": "fas fa-info-circle", "alert_class": "alert-primary"},
         }
-        toast_context.update(**alert_configs[toast_context.get("bg_color", "default")])
+        toast_context.update(
+            **alert_configs.get(
+                toast_context.get("bg_color", "default"), alert_configs["default"]
+            )
+        )
         html = render_to_string("toast.html", context=toast_context)
         broadcaster.insert_adjacent_html({"selector": ".toast-container", "html": html})
         broadcaster.broadcast()
