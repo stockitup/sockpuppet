@@ -21,7 +21,7 @@ from .element import Element
 from .reflex import PROTECTED_VARIABLES, Reflex
 from .utils import get_document_and_selectors, parse_out_html
 
-# from siu_trace import traceit
+# from server.trace import traceit
 
 
 logger = logging.getLogger("sockpuppet")
