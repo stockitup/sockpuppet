@@ -262,7 +262,7 @@ class BaseConsumer(JsonWebsocketConsumer):
                     f"siu:perf:reflexes:{name}:{date}", "cpu_time_max", cpu_time
                 )
 
-            logger.warning(
+            logger.debug(
                 f"reflex {data.get('target')} cpu: %6.2fms, wall: %6.2fms",
                 cpu_time,
                 wall_time,
