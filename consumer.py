@@ -537,9 +537,7 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         if reflex:
             stimulus_data["reflexId"] = reflex.reflex_id
-
-        channel = Channel(session_key, identifier=stimulus_data["identifier"])
-
+        channel = Channel(self.channel_name, identifier=stimulus_data["identifier"])
         channel.data(
             {
                 "name": "data",
