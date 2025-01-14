@@ -109,8 +109,7 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         if "session" in self.scope:
             import redis
-
-            r_channels = redis.Redis(db=0)
+            r_channels = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
             keys = r_channels.keys("asgi:group:*")
             for key in keys:
                 key = key.decode()
