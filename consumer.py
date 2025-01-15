@@ -1,6 +1,7 @@
 import inspect
 import json
 import logging
+import os
 import time
 from functools import wraps
 from importlib import import_module
@@ -109,7 +110,7 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         if "session" in self.scope:
             import redis
-            r_channels = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
+            r_channels = redis.Redis(host=os.environ.get("REDIS_HOST", "localhost"), port=os.environ.get("REDIS_PORT", 6379), db=0)
             keys = r_channels.keys("asgi:group:*")
             for key in keys:
                 key = key.decode()
