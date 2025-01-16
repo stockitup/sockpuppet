@@ -47,6 +47,7 @@ def context_decorator(method, extra_context):
 class BaseConsumer(JsonWebsocketConsumer):
     reflexes = {}
     subscriptions = set()
+    last_reload_time = time.time()
 
     def _get_channelname(self, channel_name):
         try:
@@ -110,7 +111,12 @@ class BaseConsumer(JsonWebsocketConsumer):
 
         if "session" in self.scope:
             import redis
-            r_channels = redis.Redis(host=os.environ.get("REDIS_HOST", "localhost"), port=os.environ.get("REDIS_PORT", 6379), db=0)
+
+            r_channels = redis.Redis(
+                host=os.environ.get("REDIS_HOST", "localhost"),
+                port=os.environ.get("REDIS_PORT", 6379),
+                db=0,
+            )
             keys = r_channels.keys("asgi:group:*")
             for key in keys:
                 key = key.decode()
@@ -349,6 +355,11 @@ class BaseConsumer(JsonWebsocketConsumer):
         try:
             if not self.reflexes:
                 self.load_reflexes()
+            if not self.reflexes.get(reflex_class_name) and (
+                self.last_reload_time and time.time() - self.last_reload_time > 10
+            ):
+                self.load_reflexes()
+                self.last_reload_time = time.time()
         except Exception as e:
             msg = f"Reflex couldn't be loaded: {str(e)}"
             self.broadcast_error(msg, data)
