@@ -115,7 +115,7 @@ class BaseConsumer(JsonWebsocketConsumer):
             r_channels = redis.Redis(
                 host=os.environ.get("REDIS_HOST", "localhost"),
                 port=os.environ.get("REDIS_PORT", 6379),
-                db=0,
+                db=0 if settings.LOCAL_SERVER_INSTANCE_ID is None else settings.LOCAL_SERVER_INSTANCE_ID * 2,
             )
             keys = r_channels.keys("asgi:group:*")
             for key in keys:
